@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package api.v1;
+
+// 定义聊天服务 (Service)
+service ChatService {
+  // 接口 1: 保存/发送消息
+  // 网关收到消息后，调用此接口将消息持久化到 MySQL
+  rpc SaveMessage (ChatPacket) returns (SaveMessageRes);
+  
+  // 接口 2: 拉取历史消息
+  // 客户端登录或打开聊天窗口时，调用此接口获取之前的聊天记录
+  rpc GetHistory (GetHistoryReq) returns (GetHistoryRes);
+}
+
+// --- 数据结构定义 (Message) ---
+
+// 聊天消息包 (核心结构)
+// 这个结构会被 gateway.proto 中的 GatewayMessage 引用
+message ChatPacket {
+  int64 msg_id = 1;       // 消息ID (通常由服务端生成，如 Snowflake 算法)
+  int64 from_user_id = 2; // 发送者 ID
+  int64 to_user_id = 3;   // 接收者 ID
+  int64 timestamp = 4;    // 发送时间戳
+  
+  string content = 5;     // 消息内容 (当前仅支持纯文本)
+}
+
+// 保存消息的响应
+message SaveMessageRes {
+  bool success = 1;       // 是否保存成功
+  int64 msg_id = 2;       // 返回生成的 msg_id 给网关/客户端
+  string error_msg = 3;   // 错误信息
+}
+
+// 拉取历史记录请求
+message GetHistoryReq {
+  int64 user_id = 1;      // 谁在拉取？
+  int64 peer_id = 2;      // 拉取和谁的聊天记录？
+  int64 last_msg_id = 3;  // 游标 (Cursor): 上一次拉取到的最后一条 ID (用于分页)
+  int32 limit = 4;        // 这次想拉多少条 (例如 20 条)
+}
+
+// 拉取历史记录响应
+message GetHistoryRes {
+  // 返回一组消息列表
+  repeated ChatPacket messages = 1; 
+}

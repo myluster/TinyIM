@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package api.v1;
+
+// 引入 chat.proto,这行代码表示 gateway 依赖于 chat 的定义。
+import "api/v1/chat.proto"; 
+
+// 消息类型枚举
+// 作用：告诉接收方（网关或客户端），这个包到底是干什么的
+enum MessageType {
+  UNKNOWN = 0;           // 默认值，防止未初始化导致的误判
+  
+  // --- 系统级指令 ---
+  HEARTBEAT_PING = 1;    // 客户端发出的心跳 "还在吗？"
+  HEARTBEAT_PONG = 2;    // 服务端回复的心跳 "我还在"
+  
+  // --- 业务级指令 ---
+  CHAT_SEND = 10;        // 客户端 -> 服务端：发送消息请求
+  CHAT_PUSH = 11;        // 服务端 -> 客户端：推送新消息
+  CHAT_ACK  = 12;        // 服务端 -> 客户端：确认消息已收到
+}
+
+// 网关消息 (The Envelope)
+// 这是 WebSocket 上传输的唯一数据结构
+// 所有的具体业务数据（聊天、心跳）都装在这个“信封”里
+message GatewayMessage {
+  MessageType type = 1;     // 消息类型：拆包员第一眼看这个
+  int64 request_id = 2;     // 请求ID：用于 客户端请求 <-> 服务端响应 的匹配
+
+  // oneof: 联合体，同一时刻只能存在其中一种数据，要么插 "错误信息"，要么插 "聊天数据"
+  oneof payload {
+    string error = 3;             // 如果出错，这里填错误原因
+    bytes binary_data = 4;        // 预留：通用二进制数据
+       
+    // 下面这个 ChatPacket 定义在 chat.proto 中
+    // 当 type 是 CHAT_SEND 或 CHAT_PUSH 时，数据放在这里
+    ChatPacket chat_data = 5;     
+  }
+}
