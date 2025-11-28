@@ -1,0 +1,47 @@
+# --- C++ / CMake / Generic ---
+build/
+out/
+bin/
+lib/
+*.d
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.lib
+*.a
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+*.sln
+*.vcxproj
+*.vcxproj.user
+.vscode/
+
+# --- Qt ---
+*.user
+*.qch
+*.qhelp
+*.qcollection
+*.pro.user
+moc_*.cpp
+ui_*.h
+qrc_*.cpp
+Makefile*
+
+# --- Web (Node.js) ---
+node_modules/
+dist/
+npm-debug.log*
+yarn-error.log
+.env
+.DS_Store
+
+# --- Docker ---
+.docker/
+
+# --- Temporary Files ---
+*.log
+*.tmp
