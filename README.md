@@ -51,14 +51,21 @@ TinyIM 是一个旨在探索现代即时通讯（IM）架构的学习型项目�
     * 点对点 (1-on-1) 纯文本聊天。
     * 用户在线状态感知。
     * 多端消息同步 (Web 端发送，Qt 端接收)。
-5.  **文件传输 (File Transfer)**
+5.  **好友管理 (Friend Management)**
+    *   **添加好友**: 支持通过 ID 或用户名搜索并添加好友。
+    *   **好友列表**: 展示好友列表及在线状态。
+    *   **好友申请**: 处理好友请求（接受/拒绝）。
+6.  **会话管理 (Session Management)**
+    *   **最近会话**: 维护最近联系人列表，按时间排序。
+    *   **未读计数**: 统计每个会话的未读消息数。
+7.  **文件传输 (File Transfer)**
     * **策略**: HTTP 控制流与数据流分离。
     * **断点下载**: 支持 HTTP `Range` 头，允许暂停和恢复下载。
-    * **分片上传**: 简单的基于 Offset 的分块上传机制，支持网络中断后续传。
-    * **服务端实现**: 使用 Boost.Beast 处理文件 IO 和 HTTP Range 请求。
-6.  **客户端本地存储 (Local Cache - Qt)**
-    * **消息漫游与缓存**: 使用 **SQLite** 本地存储聊天记录，优先展示本地历史，减少服务器拉取频率。
-    * **文件管理**: 维护本地文件索引，避免重复下载已存在的文件。
+    *   **分片上传**: 简单的基于 Offset 的分块上传机制，支持网络中断后续传。
+    *   **服务端实现**: 使用 Boost.Beast 处理文件 IO 和 HTTP Range 请求。
+8.  **客户端本地存储 (Local Cache - Qt)**
+    *   **消息漫游与缓存**: 使用 **SQLite** 本地存储聊天记录，优先展示本地历史，减少服务器拉取频率。
+    *   **文件管理**: 维护本地文件索引，避免重复下载已存在的文件。
 
 ## 4. 项目结构与模块说明
 
@@ -98,3 +105,25 @@ TinyIM/
 ├── third_party/         # [依赖] 外部库源码
 ├── CMakeLists.txt       # 根构建脚本
 └── README.md
+```
+
+## 常用脚本 (位于 `infra/scripts/`)
+
+为了方便开发，我们提供了一系列 Windows 批处理脚本：
+
+*   **启动环境**: `start_dev.bat` (启动 Docker 容器)
+*   **停止环境**: `stop_dev.bat` (停止 Docker 容器)
+*   **重置数据库**: `reset_db.bat` (清空数据库数据)
+*   **编译后端**: `build_backend.bat` (在容器内执行 make)
+*   **运行服务**: `run_backend.bat` (在容器内启动服务)
+*   **查看日志**: `monitor_logs.bat` (实时查看 auth, chat, gateway 日志)
+*   **进入 Shell**: `enter_dev.bat` (进入容器命令行)
+
+### 推荐开发流程
+1. `start_dev.bat`
+2. `build_backend.bat`
+3. `run_backend.bat`
+4. `monitor_logs.bat` (新开一个终端窗口保持运行)
+
+## 手动验证步骤
+(请参考 `verification_guide.md`)

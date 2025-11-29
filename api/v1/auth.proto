@@ -3,19 +3,27 @@ syntax = "proto3";
 package api.v1;
 
 // 定义认证服务 (Service)
-// 职责：处理所有与“我是谁”有关的请求
 service AuthService {
-  // 接口 1: 登录
-  // 输入账号密码，如果正确，返回一个 Token (通行证)
+  // 登录
   rpc Login (LoginReq) returns (LoginRes);
 
-  // 接口 2: 注册
-  // 创建新账号
+  // 注册
   rpc Register (RegisterReq) returns (RegisterRes);
   
-  // 接口 3: 校验 Token (这是给网关用的内部接口)
-  // 网关收到 WebSocket 连接请求时，调用此接口检查 Token 是否合法
+  // 校验 Token
   rpc VerifyToken (VerifyTokenReq) returns (VerifyTokenRes);
+
+  // 添加好友请求
+  rpc AddFriend (AddFriendReq) returns (AddFriendRes);
+
+  // 获取好友列表
+  rpc GetFriendList (GetFriendListReq) returns (GetFriendListRes);
+
+  // 处理好友请求 (接受/拒绝)
+  rpc HandleFriendRequest (HandleFriendRequestReq) returns (HandleFriendRequestRes);
+
+  // 获取待处理的好友请求列表
+  rpc GetPendingFriendRequests (GetPendingFriendRequestsReq) returns (GetPendingFriendRequestsRes);
 }
 
 // --- 数据结构定义 (Message) ---
@@ -23,22 +31,21 @@ service AuthService {
 // 登录请求
 message LoginReq {
   string username = 1; 
-  string password = 2; // 注意：实际传输建议用 HTTPS 加密，或者传输 Hash 后的值
+  string password = 2;
 }
 
 // 登录响应
 message LoginRes {
   bool success = 1;
-  int64 user_id = 2;   // 用户唯一 ID (后续聊天全靠这个 ID 认人)
-  string token = 3;    // JWT 或 SessionID (核心通行证)
+  int64 user_id = 2;
+  string token = 3;
   string error_msg = 4;
 }
 
-// 注册请求 (保持最简，仅需用户名密码)
+// 注册请求
 message RegisterReq {
   string username = 1;
   string password = 2;
-  // string email = 3; // 可选扩展
 }
 
 message RegisterRes {
@@ -54,6 +61,64 @@ message VerifyTokenReq {
 
 // Token 校验响应
 message VerifyTokenRes {
-  bool valid = 1;      // Token 是否有效
-  int64 user_id = 2;   // 如果有效，告诉网关这个 Token 属于哪个 UserID
+  bool valid = 1;
+  int64 user_id = 2;
+}
+
+// 添加好友请求
+message AddFriendReq {
+  int64 user_id = 1;      // 发起人 ID
+  int64 friend_id = 2;    // 目标好友 ID
+}
+
+message AddFriendRes {
+  bool success = 1;
+  string error_msg = 2;
+}
+
+// 获取好友列表请求
+message GetFriendListReq {
+  int64 user_id = 1;
+}
+
+message FriendInfo {
+  int64 user_id = 1;
+  string username = 2;
+  int32 status = 3; // 0: Offline, 1: Online
+}
+
+message GetFriendListRes {
+  bool success = 1;
+  repeated FriendInfo friends = 2;
+  string error_msg = 3;
+}
+
+// 处理好友请求
+message HandleFriendRequestReq {
+  int64 user_id = 1;      // 处理人 ID
+  int64 request_id = 2;   // 请求 ID (或者 sender_id)
+  bool accept = 3;        // true: 接受, false: 拒绝
+}
+
+message HandleFriendRequestRes {
+  bool success = 1;
+  string error_msg = 2;
+}
+
+// 获取待处理好友请求
+message GetPendingFriendRequestsReq {
+    int64 user_id = 1;
+}
+
+message FriendRequest {
+    int64 request_id = 1;
+    int64 sender_id = 2;
+    string sender_username = 3;
+    int64 created_at = 4;
+}
+
+message GetPendingFriendRequestsRes {
+    bool success = 1;
+    string error_msg = 2;
+    repeated FriendRequest requests = 3;
 }

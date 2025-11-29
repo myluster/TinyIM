@@ -1,0 +1,39 @@
+{
+    "server": {
+        "gateway_port": 8080,
+        "auth_port": 50051,
+        "chat_port": 50052,
+        "status_port": 50053
+    },
+    "mysql": {
+        "host": "tinyim_mysql_master",
+        "port": 3306,
+        "user": "root",
+        "password": "root_password",
+        "dbname": "tinyim_db",
+        "pool_size": 5
+    },
+    "mysql_slave": {
+        "host": "tinyim_mysql_slave_1",
+        "port": 3306,
+        "user": "root",
+        "password": "root_password",
+        "dbname": "tinyim_db",
+        "pool_size": 5
+    },
+    "redis": {
+        "host": "tinyim_redis_master",
+        "port": 6379,
+        "pool_size": 5
+    },
+    "redis_sentinel": {
+        "host": "tinyim_sentinel_1",
+        "port": 26379,
+        "master_name": "mymaster"
+    },
+    "services": {
+        "auth_address": "tinyim_auth_1:50051",
+        "chat_address": "tinyim_chat_1:50052",
+        "status_address": "tinyim_status_1:50053"
+    }
+}

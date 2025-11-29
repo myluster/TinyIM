@@ -15,4 +15,4 @@ cd /d "%SCRIPT_DIR%\..\compose"
 docker-compose down
 
 echo TinyIM services stopped.
-pause
+

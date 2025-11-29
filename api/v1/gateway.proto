@@ -18,6 +18,14 @@ enum MessageType {
   CHAT_SEND = 10;        // 客户端 -> 服务端：发送消息请求
   CHAT_PUSH = 11;        // 服务端 -> 客户端：推送新消息
   CHAT_ACK  = 12;        // 服务端 -> 客户端：确认消息已收到
+  
+  STATUS_UPDATE = 20;    // 服务端 -> 客户端：好友在线状态更新
+}
+
+message StatusUpdatePacket {
+  int64 user_id = 1;
+  int32 status = 2;      // 0: Offline, 1: Online
+  int64 timestamp = 3;
 }
 
 // 网关消息 (The Envelope)
@@ -34,6 +42,10 @@ message GatewayMessage {
        
     // 下面这个 ChatPacket 定义在 chat.proto 中
     // 当 type 是 CHAT_SEND 或 CHAT_PUSH 时，数据放在这里
+    // 当 type 是 CHAT_SEND 或 CHAT_PUSH 时，数据放在这里
     ChatPacket chat_data = 5;     
+    
+    // 当 type 是 STATUS_UPDATE 时，数据放在这里
+    StatusUpdatePacket status_data = 6;
   }
 }

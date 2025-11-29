@@ -1,0 +1,159 @@
+version: '3.8'
+
+services:
+  # --- Gateway Service ---
+  gateway:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_gateway
+    environment:
+      - GATEWAY_ID=1
+      - GATEWAY_PORT=8080
+    volumes:
+      - ../../:/app
+    command: /app/build/services/gateway/gateway_server /app/configs/config_single.json
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  # --- Auth Service ---
+  auth:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_auth
+    environment:
+      - SERVICE_PORT=50051
+    volumes:
+      - ../../:/app
+    command: /app/build/services/auth/auth_server /app/configs/config_single.json
+    ports:
+      - "50051:50051"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  # --- Chat Service ---
+  chat:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_chat
+    environment:
+      - SERVICE_PORT=50052
+    volumes:
+      - ../../:/app
+    command: /app/build/services/chat/chat_server /app/configs/config_single.json
+    ports:
+      - "50052:50052"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  # --- Status Service ---
+  status:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_status
+    environment:
+      - SERVICE_PORT=50053
+    volumes:
+      - ../../:/app
+    command: /app/build/services/status/status_server /app/configs/config_single.json
+    ports:
+      - "50053:50053"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  # --- 基础设施: MySQL ---
+  mysql:
+    image: mysql:8.0
+    container_name: tinyim_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: tinyim_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tinyim-net
+
+  # --- 基础设施: Redis ---
+  redis:
+    image: redis:6.2
+    container_name: tinyim_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tinyim-net
+
+  # --- 开发环境容器 (Dev Container) ---
+  tinyim-dev:
+    build: 
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_dev
+    environment:
+      - MYSQL_HOST=tinyim_mysql
+      - MYSQL_SLAVE_HOST=tinyim_mysql
+      - MYSQL_SLAVE_PORT=3306
+      - MYSQL_SLAVE_USER=root
+      - MYSQL_SLAVE_PASSWORD=root_password
+      - MYSQL_SLAVE_DATABASE=tinyim_db
+      - REDIS_HOST=tinyim_redis
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    volumes:
+      - ../../:/app
+    command: tail -f /dev/null
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+# 数据卷持久化
+volumes:
+  mysql_data:
+  redis_data:
+
+# 网络配置
+networks:
+  tinyim-net:
+    driver: bridge

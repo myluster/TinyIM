@@ -11,6 +11,11 @@ service ChatService {
   // 接口 2: 拉取历史消息
   // 客户端登录或打开聊天窗口时，调用此接口获取之前的聊天记录
   rpc GetHistory (GetHistoryReq) returns (GetHistoryRes);
+  // 接口 3: 获取最近会话列表
+  rpc GetRecentSessions (GetRecentSessionsReq) returns (GetRecentSessionsRes);
+  
+  // 接口 4: 获取离线消息
+  rpc GetOfflineMessages (GetOfflineMessagesReq) returns (GetOfflineMessagesRes);
 }
 
 // --- 数据结构定义 (Message) ---
@@ -45,4 +50,27 @@ message GetHistoryReq {
 message GetHistoryRes {
   // 返回一组消息列表
   repeated ChatPacket messages = 1; 
+}
+
+message GetRecentSessionsReq {
+  int64 user_id = 1;
+}
+
+message Session {
+  int64 peer_id = 1;
+  string last_msg_content = 2;
+  int64 last_msg_timestamp = 3;
+  int32 unread_count = 4;
+}
+
+message GetRecentSessionsRes {
+  repeated Session sessions = 1;
+}
+
+message GetOfflineMessagesReq {
+  int64 user_id = 1;
+}
+
+message GetOfflineMessagesRes {
+  repeated ChatPacket messages = 1;
 }

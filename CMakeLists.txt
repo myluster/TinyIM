@@ -11,28 +11,32 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # --- 2. 依赖管理 ---
 find_package(Protobuf REQUIRED)
-# gRPC 查找逻辑：优先 CONFIG 模式，失败则尝试 pkg-config
-find_package(gRPC CONFIG)
-if (NOT gRPC_FOUND)
-    message(STATUS "gRPC CONFIG not found, trying pkg-config")
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(gRPC REQUIRED grpc++ grpc)
-    
-    # 如果 pkg-config 找到了，手动创建 gRPC::grpc++ 目标
-    if (gRPC_FOUND AND NOT TARGET gRPC::grpc++)
-        add_library(gRPC::grpc++ INTERFACE IMPORTED)
-        target_include_directories(gRPC::grpc++ INTERFACE ${gRPC_INCLUDE_DIRS})
-        target_link_libraries(gRPC::grpc++ INTERFACE ${gRPC_LIBRARIES})
-        message(STATUS "Created gRPC::grpc++ target from pkg-config")
-    endif()
-endif()
+
+# gRPC 查找：手动查找库文件和创建目标
+find_library(GRPC_LIBRARY NAMES grpc++ REQUIRED)
+find_library(GRPC_LIBRARY_CORE NAMES grpc REQUIRED)
+find_library(GPR_LIBRARY NAMES gpr REQUIRED)
+
+# 手动创建 gRPC::grpc++ 目标
+add_library(gRPC::grpc++ INTERFACE IMPORTED)
+target_link_libraries(gRPC::grpc++ INTERFACE ${GRPC_LIBRARY} ${GRPC_LIBRARY_CORE} ${GPR_LIBRARY})
+
+message(STATUS "Found gRPC libraries:")
+message(STATUS "  grpc++: ${GRPC_LIBRARY}")
+message(STATUS "  grpc: ${GRPC_LIBRARY_CORE}")
+message(STATUS "  gpr: ${GPR_LIBRARY}")
+
 find_package(OpenSSL REQUIRED)
 find_package(Boost REQUIRED COMPONENTS system thread)
+find_package(spdlog REQUIRED)
+find_package(fmt REQUIRED)
 
 # 先编译 api 生成代码，后续的服务才能引用
 add_subdirectory(api)
 
-# 暂时先注释掉服务层，等 api 编译通了再打开
-# add_subdirectory(services/gateway)
-# add_subdirectory(services/auth)
-# add_subdirectory(services/chat)
+add_subdirectory(services/common)
+add_subdirectory(services/auth)
+add_subdirectory(services/chat)
+add_subdirectory(services/gateway)
+add_subdirectory(services/status)
+add_subdirectory(tests)

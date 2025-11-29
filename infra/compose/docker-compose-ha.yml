@@ -1,0 +1,345 @@
+version: '3.8'
+
+services:
+  # --- Nginx Load Balancer ---
+  nginx:
+    image: nginx:alpine
+    container_name: tinyim_nginx
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - gateway-1
+      - gateway-2
+      - gateway-3
+    networks:
+      - tinyim-net
+
+  # --- Gateway Cluster (3 Instances) ---
+  gateway-1:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_gateway_1
+    environment:
+      - GATEWAY_ID=1
+      - GATEWAY_PORT=8080
+    volumes:
+      - ../../:/app
+    command: /app/build/services/gateway/gateway_server configs/config_ha.json
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  gateway-2:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_gateway_2
+    environment:
+      - GATEWAY_ID=2
+      - GATEWAY_PORT=8080
+    volumes:
+      - ../../:/app
+    command: /app/build/services/gateway/gateway_server configs/config_ha.json
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  gateway-3:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_gateway_3
+    environment:
+      - GATEWAY_ID=3
+      - GATEWAY_PORT=8080
+    volumes:
+      - ../../:/app
+    command: /app/build/services/gateway/gateway_server configs/config_ha.json
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  # --- MySQL Master-Slave ---
+  mysql-master:
+    image: mysql:8.0
+    container_name: tinyim_mysql_master
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: tinyim_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_master_data:/var/lib/mysql
+      - ../mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../mysql/master.cnf:/etc/mysql/conf.d/master.cnf
+    command: --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tinyim-net
+
+  mysql-slave-1:
+    image: mysql:8.0
+    container_name: tinyim_mysql_slave_1
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: tinyim_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_slave_1_data:/var/lib/mysql
+      - ../mysql/slave.cnf:/etc/mysql/conf.d/slave.cnf
+    command: --default-authentication-plugin=mysql_native_password
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tinyim-net
+
+  mysql-slave-2:
+    image: mysql:8.0
+    container_name: tinyim_mysql_slave_2
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: tinyim_db
+    ports:
+      - "3308:3306"
+    volumes:
+      - mysql_slave_2_data:/var/lib/mysql
+      - ../mysql/slave.cnf:/etc/mysql/conf.d/slave.cnf
+    command: --default-authentication-plugin=mysql_native_password
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tinyim-net
+
+  # --- Redis Sentinel ---
+  redis-master:
+    image: redis:6.2
+    container_name: tinyim_redis_master
+    command: redis-server --port 6379
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_master_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - tinyim-net
+
+  redis-sentinel-1:
+    image: redis:6.2
+    container_name: tinyim_sentinel_1
+    command: >
+      sh -c "echo 'port 26379
+      sentinel monitor mymaster tinyim_redis_master 6379 2
+      sentinel down-after-milliseconds mymaster 5000
+      sentinel parallel-syncs mymaster 1
+      sentinel failover-timeout mymaster 10000' > /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    ports:
+      - "26379:26379"
+    depends_on:
+      - redis-master
+    networks:
+      - tinyim-net
+
+  redis-sentinel-2:
+    image: redis:6.2
+    container_name: tinyim_sentinel_2
+    command: >
+      sh -c "echo 'port 26379
+      sentinel monitor mymaster tinyim_redis_master 6379 2
+      sentinel down-after-milliseconds mymaster 5000
+      sentinel parallel-syncs mymaster 1
+      sentinel failover-timeout mymaster 10000' > /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    ports:
+      - "26380:26379"
+    depends_on:
+      - redis-master
+    networks:
+      - tinyim-net
+
+  redis-sentinel-3:
+    image: redis:6.2
+    container_name: tinyim_sentinel_3
+    command: >
+      sh -c "echo 'port 26379
+      sentinel monitor mymaster tinyim_redis_master 6379 2
+      sentinel down-after-milliseconds mymaster 5000
+      sentinel parallel-syncs mymaster 1
+      sentinel failover-timeout mymaster 10000' > /tmp/sentinel.conf && redis-sentinel /tmp/sentinel.conf"
+    ports:
+      - "26381:26379"
+    depends_on:
+      - redis-master
+    networks:
+      - tinyim-net
+
+  # --- Auth Service (2 Instances) ---
+  auth-1:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_auth_1
+    environment:
+      - SERVICE_PORT=50051
+    volumes:
+      - ../../:/app
+    command: /app/build/services/auth/auth_server configs/config_ha.json
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      mysql-slave-1:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  auth-2:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_auth_2
+    environment:
+      - SERVICE_PORT=50051
+    volumes:
+      - ../../:/app
+    command: /app/build/services/auth/auth_server configs/config_ha.json
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+      mysql-slave-1:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  # --- Chat Service (2 Instances) ---
+  chat-1:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_chat_1
+    environment:
+      - SERVICE_PORT=50052
+    volumes:
+      - ../../:/app
+    command: /app/build/services/chat/chat_server configs/config_ha.json
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  chat-2:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_chat_2
+    environment:
+      - SERVICE_PORT=50052
+    volumes:
+      - ../../:/app
+    command: /app/build/services/chat/chat_server configs/config_ha.json
+    depends_on:
+      mysql-master:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  # --- Status Service (2 Instances) ---
+  status-1:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_status_1
+    environment:
+      - SERVICE_PORT=50053
+    volumes:
+      - ../../:/app
+    command: /app/build/services/status/status_server configs/config_ha.json
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  status-2:
+    build:
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_status_2
+    environment:
+      - SERVICE_PORT=50053
+    volumes:
+      - ../../:/app
+    command: /app/build/services/status/status_server configs/config_ha.json
+    depends_on:
+      redis-master:
+        condition: service_healthy
+    networks:
+      - tinyim-net
+
+  # --- Dev Container for Building ---
+  tinyim-dev:
+    build: 
+      context: ../../
+      dockerfile: infra/docker/Dockerfile
+    container_name: tinyim_dev
+    environment:
+      - MYSQL_HOST=tinyim_mysql_master
+      - MYSQL_SLAVE_HOST=tinyim_mysql_slave_1
+      - MYSQL_SLAVE_PORT=3306
+      - MYSQL_SLAVE_USER=root
+      - MYSQL_SLAVE_PASSWORD=root_password
+      - MYSQL_SLAVE_DATABASE=tinyim_db
+      - REDIS_HOST=tinyim_redis_master
+    volumes:
+      - ../../:/app
+    command: tail -f /dev/null
+    networks:
+      - tinyim-net
+
+volumes:
+  mysql_master_data:
+  mysql_slave_1_data:
+  mysql_slave_2_data:
+  redis_master_data:
+
+networks:
+  tinyim-net:
+    driver: bridge

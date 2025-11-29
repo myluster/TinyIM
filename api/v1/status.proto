@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package api.v1;
+
+service StatusService {
+    // User Login: Set status to Online, return list of online friends to notify
+    rpc Login (LoginStatusReq) returns (LoginStatusRes);
+    
+    // User Logout: Set status to Offline, return list of online friends to notify
+    rpc Logout (LogoutStatusReq) returns (LogoutStatusRes);
+    
+    // Get Status: Batch query status for users
+    rpc GetStatus (GetStatusReq) returns (GetStatusRes);
+}
+
+message LoginStatusReq {
+    int64 user_id = 1;
+    string token = 2; // For validation if needed
+}
+
+message LoginStatusRes {
+    bool success = 1;
+    repeated int64 online_friend_ids = 2; // Friends who are currently online
+}
+
+message LogoutStatusReq {
+    int64 user_id = 1;
+    string token = 2;
+}
+
+message LogoutStatusRes {
+    bool success = 1;
+    repeated int64 online_friend_ids = 2; // Friends who are currently online
+}
+
+message GetStatusReq {
+    repeated int64 user_ids = 1;
+}
+
+message GetStatusRes {
+    map<int64, int32> status_map = 1; // user_id -> status (0=Offline, 1=Online)
+}
