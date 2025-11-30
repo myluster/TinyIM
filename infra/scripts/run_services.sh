@@ -50,27 +50,32 @@ pkill -f status_server 2>/dev/null
 
 sleep 1
 
-# Start services with nohup
+# Determine config file (default or from parameter)
+CONFIG_FILE="${1:-configs/config.json}"
+echo "Using config file: $CONFIG_FILE"
+echo ""
+
+# Start services with nohup and config file
 echo "Starting Auth Server..."
-nohup /app/build/services/auth/auth_server > /app/auth.log 2>&1 &
+nohup /app/build/services/auth/auth_server "$CONFIG_FILE" > /app/auth.log 2>&1 &
 AUTH_PID=$!
 
 sleep 1
 
 echo "Starting Chat Server..."
-nohup /app/build/services/chat/chat_server > /app/chat.log 2>&1 &
+nohup /app/build/services/chat/chat_server "$CONFIG_FILE" > /app/chat.log 2>&1 &
 CHAT_PID=$!
 
 sleep 1
 
 echo "Starting Gateway Server..."
-nohup /app/build/services/gateway/gateway_server > /app/gateway.log 2>&1 &
+nohup /app/build/services/gateway/gateway_server "$CONFIG_FILE" > /app/gateway.log 2>&1 &
 GATEWAY_PID=$!
 
 sleep 1
 
 echo "Starting Status Server..."
-nohup /app/build/services/status/status_server > /app/status.log 2>&1 &
+nohup /app/build/services/status/status_server "$CONFIG_FILE" > /app/status.log 2>&1 &
 STATUS_PID=$!
 
 sleep 2

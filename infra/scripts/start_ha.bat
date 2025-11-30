@@ -19,3 +19,11 @@ docker-compose -f docker-compose-ha.yml up -d --build
 
 echo TinyIM HA services started.
 
+:: Setup MySQL Replication (script will wait for MySQL to be ready)
+echo Setting up MySQL Replication...
+call "%SCRIPT_DIR%\setup_mysql_replication.bat"
+
+echo HA environment startup complete.
+
+
+

@@ -12,4 +12,3 @@ cd /d "%SCRIPT_DIR%\..\compose"
 docker-compose -f docker-compose-ha.yml down -v
 
 echo Database reset complete. Please run start_ha.bat to restart.
-

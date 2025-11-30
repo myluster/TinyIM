@@ -62,11 +62,29 @@ public:
         
         // Init ReadOnly Pool (Only if NOT in single node mode)
         if (!single_node_mode_) {
-            for (int i = 0; i < readonly_config.pool_size; ++i) {
-                auto conn = CreateConnection(readonly_config_);
-                if (conn) {
-                    readonly_pool_.push(std::move(conn));
+            int max_retries = 10;
+            for (int attempt = 0; attempt < max_retries; ++attempt) {
+                // Try to fill the pool
+                while (readonly_pool_.size() < readonly_config.pool_size) {
+                    auto conn = CreateConnection(readonly_config_);
+                    if (conn) {
+                        readonly_pool_.push(std::move(conn));
+                    } else {
+                        break; // Connection failed, wait and retry
+                    }
                 }
+
+                if (!readonly_pool_.empty()) {
+                    break; // We have at least some connections, good enough
+                }
+
+                spdlog::warn("MySQL Pool: Waiting for ReadOnly instance... (Attempt {}/{})", attempt + 1, max_retries);
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+            
+            if (readonly_pool_.empty()) {
+                spdlog::warn("MySQL Pool: Failed to initialize any ReadOnly connections after retries. Falling back to Primary for all queries.");
+                single_node_mode_ = true;
             }
         }
         

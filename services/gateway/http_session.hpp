@@ -205,6 +205,40 @@ public:
                         res.body() = create_json_response(false, error_msg);
                     }
                 }
+
+            } else if (req.method() == http::verb::post && req.target() == "/api/friend/delete") {
+                std::string body = req.body();
+                std::string token, friend_id_str;
+                auto parse_kv = [&](const std::string& s) {
+                    auto pos = s.find('=');
+                    if (pos != std::string::npos) return std::make_pair(s.substr(0, pos), s.substr(pos + 1));
+                    return std::make_pair(std::string(), std::string());
+                };
+                
+                size_t start = 0, end = 0;
+                while ((end = body.find('&', start)) != std::string::npos) {
+                    auto kv = parse_kv(body.substr(start, end - start));
+                    if (kv.first == "token") token = kv.second;
+                    else if (kv.first == "friend_id") friend_id_str = kv.second;
+                    start = end + 1;
+                }
+                auto kv = parse_kv(body.substr(start));
+                if (kv.first == "token") token = kv.second;
+                else if (kv.first == "friend_id") friend_id_str = kv.second;
+
+                int64_t user_id = 0;
+                if (!self->context_->auth_client->VerifyToken(token, user_id)) {
+                    res.result(http::status::unauthorized);
+                    res.body() = create_json_response(false, "Invalid token");
+                } else {
+                    std::string error_msg;
+                    int64_t friend_id = friend_id_str.empty() ? 0 : std::stoll(friend_id_str);
+                    if (self->context_->auth_client->DeleteFriend(user_id, friend_id, error_msg)) {
+                        res.body() = create_json_response(true, "Friend deleted");
+                    } else {
+                        res.body() = create_json_response(false, error_msg);
+                    }
+                }
             } else {
                 // GET requests
                 auto parse_query = [&](const std::string& target, const std::string& key) {

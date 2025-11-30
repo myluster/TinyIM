@@ -18,6 +18,7 @@ enum MessageType {
   CHAT_SEND = 10;        // 客户端 -> 服务端：发送消息请求
   CHAT_PUSH = 11;        // 服务端 -> 客户端：推送新消息
   CHAT_ACK  = 12;        // 服务端 -> 客户端：确认消息已收到
+  CHAT_READ = 13;        // 客户端 -> 服务端：消息已读回执
   
   STATUS_UPDATE = 20;    // 服务端 -> 客户端：好友在线状态更新
 }

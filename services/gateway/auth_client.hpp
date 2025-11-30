@@ -125,6 +125,20 @@ public:
         return requests;
     }
 
+    bool DeleteFriend(int64_t user_id, int64_t friend_id, std::string& error_msg) {
+        api::v1::DeleteFriendReq request;
+        request.set_user_id(user_id);
+        request.set_friend_id(friend_id);
+        api::v1::DeleteFriendRes reply;
+        grpc::ClientContext context;
+        grpc::Status status = stub_->DeleteFriend(&context, request, &reply);
+        if (status.ok() && reply.success()) {
+            return true;
+        }
+        error_msg = reply.error_msg();
+        return false;
+    }
+
 private:
     std::unique_ptr<api::v1::AuthService::Stub> stub_;
 };

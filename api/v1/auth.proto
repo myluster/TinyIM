@@ -24,6 +24,22 @@ service AuthService {
 
   // 获取待处理的好友请求列表
   rpc GetPendingFriendRequests (GetPendingFriendRequestsReq) returns (GetPendingFriendRequestsRes);
+
+  // 删除好友
+  rpc DeleteFriend (DeleteFriendReq) returns (DeleteFriendRes);
+}
+
+// --- 数据结构定义 (Message) ---
+
+// 删除好友请求
+message DeleteFriendReq {
+  int64 user_id = 1;
+  int64 friend_id = 2;
+}
+
+message DeleteFriendRes {
+  bool success = 1;
+  string error_msg = 2;
 }
 
 // --- 数据结构定义 (Message) ---

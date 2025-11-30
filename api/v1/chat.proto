@@ -16,6 +16,22 @@ service ChatService {
   
   // 接口 4: 获取离线消息
   rpc GetOfflineMessages (GetOfflineMessagesReq) returns (GetOfflineMessagesRes);
+
+  // 接口 5: 确认消息已读
+  rpc AckMessages (AckMessagesReq) returns (AckMessagesRes);
+}
+
+// --- 数据结构定义 (Message) ---
+
+// 确认消息已读请求
+message AckMessagesReq {
+  int64 user_id = 1;      // 谁读了消息
+  int64 peer_id = 2;      // 读了谁的消息
+  int64 last_msg_id = 3;  // 读到了哪一条 (可选，如果为0则清空所有未读)
+}
+
+message AckMessagesRes {
+  bool success = 1;
 }
 
 // --- 数据结构定义 (Message) ---

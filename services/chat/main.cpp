@@ -24,8 +24,27 @@ using api::v1::GetRecentSessionsRes;
 using api::v1::GetOfflineMessagesReq;
 using api::v1::GetOfflineMessagesRes;
 using api::v1::Session;
+using api::v1::AckMessagesReq;
+using api::v1::AckMessagesRes;
 
 class ChatServiceImpl final : public ChatService::Service {
+    Status AckMessages(ServerContext* context, const AckMessagesReq* request, AckMessagesRes* reply) override {
+        int64_t user_id = request->user_id();
+        int64_t peer_id = request->peer_id();
+        spdlog::info("AckMessages request: user_id={}, peer_id={}", user_id, peer_id);
+
+        tinyim::db::MySQLClient mysql;
+        // Reset unread_count to 0 for this session
+        std::string query = "UPDATE sessions SET unread_count = 0 WHERE user_id = " + std::to_string(user_id) + " AND peer_id = " + std::to_string(peer_id);
+        
+        if (mysql.Execute(query)) {
+            reply->set_success(true);
+        } else {
+            reply->set_success(false);
+        }
+        return Status::OK;
+    }
+
     Status SaveMessage(ServerContext* context, const ChatPacket* request, SaveMessageRes* reply) override {
         spdlog::info("SaveMessage request from user: {} to user: {}", request->from_user_id(), request->to_user_id());
         

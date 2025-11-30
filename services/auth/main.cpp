@@ -32,6 +32,8 @@ using api::v1::HandleFriendRequestRes;
 using api::v1::FriendInfo;
 using api::v1::GetPendingFriendRequestsReq;
 using api::v1::GetPendingFriendRequestsRes;
+using api::v1::DeleteFriendReq;
+using api::v1::DeleteFriendRes;
 
 // Global DB Clients (Thread-local or instantiated per request would be better, but for now we use RAII in handlers)
 // Actually, MySQLClient and RedisClient are now RAII wrappers around the pool, so we instantiate them in handlers.
@@ -276,6 +278,32 @@ public:
             } else {
                 req->set_created_at(0);
             }
+        }
+        return Status::OK;
+    }
+
+
+    Status DeleteFriend(ServerContext* context, const DeleteFriendReq* request, DeleteFriendRes* reply) override {
+        tinyim::db::MySQLClient mysql;
+        int64_t user_id = request->user_id();
+        int64_t friend_id = request->friend_id();
+        spdlog::info("DeleteFriend request: user_id={}, friend_id={}", user_id, friend_id);
+
+        // Delete from friends table (Bidirectional)
+        std::string delete_f1 = "DELETE FROM friends WHERE user_id = " + std::to_string(user_id) + " AND friend_id = " + std::to_string(friend_id);
+        std::string delete_f2 = "DELETE FROM friends WHERE user_id = " + std::to_string(friend_id) + " AND friend_id = " + std::to_string(user_id);
+        
+        // Also delete friend requests? Maybe not strictly necessary but cleaner.
+        std::string delete_req1 = "DELETE FROM friend_requests WHERE sender_id = " + std::to_string(user_id) + " AND receiver_id = " + std::to_string(friend_id);
+        std::string delete_req2 = "DELETE FROM friend_requests WHERE sender_id = " + std::to_string(friend_id) + " AND receiver_id = " + std::to_string(user_id);
+
+        if (mysql.Execute(delete_f1) && mysql.Execute(delete_f2)) {
+            mysql.Execute(delete_req1);
+            mysql.Execute(delete_req2);
+            reply->set_success(true);
+        } else {
+            reply->set_success(false);
+            reply->set_error_msg("Database error");
         }
         return Status::OK;
     }

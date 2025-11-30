@@ -75,3 +75,22 @@ target_include_directories(stress_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/services/common
     ${CMAKE_SOURCE_DIR}/api
 )
+
+# Features Tests (AckMessages, DeleteFriend)
+add_executable(test_features functional/test_features.cpp)
+target_link_libraries(test_features
+    PRIVATE
+    tinyim_common
+    tinyim_proto
+    gRPC::grpc++
+    protobuf::libprotobuf
+    Boost::system
+    Boost::thread
+    OpenSSL::SSL
+    OpenSSL::Crypto
+)
+target_include_directories(test_features PRIVATE
+    ${CMAKE_SOURCE_DIR}/services/gateway
+    ${CMAKE_SOURCE_DIR}/services/common
+    ${CMAKE_SOURCE_DIR}/api
+)

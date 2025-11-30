@@ -8,5 +8,5 @@ set SCRIPT_DIR=%SCRIPT_DIR:~0,-1%
 echo Running TinyIM Backend Services (Single-Node)...
 cd /d "%SCRIPT_DIR%\..\compose"
 
-:: Execute run_services.sh inside the container using Single-Node compose file
-docker-compose -f docker-compose-single.yml exec tinyim-dev bash /app/infra/scripts/run_services.sh
+:: Execute run_services.sh inside the container using Single-Node compose file with Single-Node config
+docker-compose -f docker-compose-single.yml exec tinyim-dev bash /app/infra/scripts/run_services.sh configs/config_single.json

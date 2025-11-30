@@ -95,6 +95,18 @@ public:
         return messages;
     }
 
+    bool AckMessages(int64_t user_id, int64_t peer_id, int64_t last_msg_id = 0) {
+        api::v1::AckMessagesReq request;
+        request.set_user_id(user_id);
+        request.set_peer_id(peer_id);
+        request.set_last_msg_id(last_msg_id);
+
+        api::v1::AckMessagesRes reply;
+        grpc::ClientContext context;
+        grpc::Status status = stub_->AckMessages(&context, request, &reply);
+        return status.ok() && reply.success();
+    }
+
 private:
     std::unique_ptr<api::v1::ChatService::Stub> stub_;
 };

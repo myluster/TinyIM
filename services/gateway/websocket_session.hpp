@@ -111,7 +111,7 @@ public:
         context_->session_manager->join(user_id_, this);
 
         // Notify friends online via Status Server
-        net::post(*context_->thread_pool, [context = context_, uid = user_id_]() {
+        net::post(*context_->thread_pool, [self = shared_from_this(), context = context_, uid = user_id_]() {
             // We don't have the token here easily unless we stored it. 
             // But we verified it. Let's pass empty string for now.
             auto result = context->status_client->Login(uid, "");
@@ -133,27 +133,22 @@ public:
             // Pull Offline Messages
             auto offline_msgs = context->chat_client->GetOfflineMessages(uid);
             if (!offline_msgs.empty()) {
-                for (const auto& msg : offline_msgs) {
-                    GatewayMessage push_msg;
-                    push_msg.set_type(MessageType::CHAT_PUSH);
-                    auto* push_data = push_msg.mutable_chat_data();
-                    push_data->set_msg_id(msg.msg_id);
-                    push_data->set_from_user_id(msg.from_id);
-                    push_data->set_to_user_id(msg.to_id);
-                    push_data->set_content(msg.content);
-                    push_data->set_timestamp(msg.timestamp);
-                    
-                    // Directly send to self (this session)
-                    // We need to switch to I/O thread to send? 
-                    // SessionManager::send_to_user sends to all sessions of user.
-                    // But here we are in the session context, we can just send.
-                    // However, we are in a thread pool thread.
-                    // send_message posts to I/O strand. So it is safe.
-                    // But we don't have access to 'self' easily here? 
-                    // We captured 'context' and 'uid'. We didn't capture 'this' or 'self'.
-                    // We should use SessionManager to send to this user (which includes this session).
-                    context->session_manager->send_to_user(uid, push_msg);
-                }
+                // Optimization: Send directly to this session instead of routing through SessionManager
+                // Also, we are in thread pool, so we need to post to IO strand to send safely
+                net::dispatch(self->ws_.get_executor(), [self, offline_msgs]() {
+                    for (const auto& msg : offline_msgs) {
+                        GatewayMessage push_msg;
+                        push_msg.set_type(MessageType::CHAT_PUSH);
+                        auto* push_data = push_msg.mutable_chat_data();
+                        push_data->set_msg_id(msg.msg_id);
+                        push_data->set_from_user_id(msg.from_id);
+                        push_data->set_to_user_id(msg.to_id);
+                        push_data->set_content(msg.content);
+                        push_data->set_timestamp(msg.timestamp);
+                        
+                        self->send_message(push_msg);
+                    }
+                });
                 spdlog::info("Pushed {} offline messages to user {}", offline_msgs.size(), uid);
             }
         });
@@ -227,6 +222,18 @@ public:
                     }
                 });
             });
+        } else if (msg.type() == MessageType::CHAT_READ && msg.has_chat_data()) {
+             // Handle Read Receipt
+             net::post(*context_->thread_pool, [self = shared_from_this(), msg = std::move(msg)]() mutable {
+                 const auto& chat_data = msg.chat_data();
+                 int64_t peer_id = chat_data.to_user_id(); // In read receipt, to_user_id is the peer whose messages I read? Or from_user_id?
+                 // Usually: I (user_id_) read messages from 'peer_id'.
+                 // The client should send: to_user_id = peer_id (the one I am chatting with).
+                 // Let's assume client sends peer_id in to_user_id field.
+                 
+                 self->context_->chat_client->AckMessages(self->user_id_, peer_id);
+                 // We don't necessarily need to send ACK back for this, but maybe useful.
+             });
         } else if (msg.type() == MessageType::HEARTBEAT_PING) {
              GatewayMessage pong;
              pong.set_type(MessageType::HEARTBEAT_PONG);
